@@ -53,10 +53,10 @@ import javax.net.ssl.SSLException;
  *
  * <p>This class provides mechanisms for using Cloud IoT Core's main features. Namely
  * <ul>
- *    <li>Publishing device telemetry</li>
- *    <li>Publishing device state</li>
- *    <li>Receiving configuration changes</li>
- *    <li>Receiving commands</li>
+ * <li>Publishing device telemetry</li>
+ * <li>Publishing device state</li>
+ * <li>Receiving configuration changes</li>
+ * <li>Receiving commands</li>
  * </ul>
  *
  * <p>Create a new IotCoreClient using the {@link IotCoreClient.Builder}, and call
@@ -237,7 +237,7 @@ public class IotCoreClient {
         if (onConfigurationListener != null && onConfigurationExecutor == null) {
             throw new IllegalArgumentException("No executor provided for configuration listener");
         }
-        if (onCommandListener!= null && onCommandExecutor == null) {
+        if (onCommandListener != null && onCommandExecutor == null) {
             throw new IllegalArgumentException("No executor provided for command listener");
         }
 
@@ -770,7 +770,8 @@ public class IotCoreClient {
     /**
      * Determine appropriate error to return to client based on MqttException.
      */
-    private @ConnectionCallback.DisconnectReason int getDisconnectionReason(
+    private @ConnectionCallback.DisconnectReason
+    int getDisconnectionReason(
             MqttException mqttException) {
         switch (mqttException.getReasonCode()) {
             case MqttException.REASON_CODE_FAILED_AUTHENTICATION:
@@ -963,6 +964,46 @@ public class IotCoreClient {
             }
         }
 
+        mSemaphore.release();
+        return true;
+    }
+
+    public boolean attachDevice(String deviceId) {
+        synchronized (mQueueLock) {
+            try {
+                publish(String.format("/devices/%s/attach", deviceId), "{}".getBytes(), 1);
+                Log.d(TAG, "Published attach event");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        mSemaphore.release();
+        return true;
+    }
+
+    public boolean detachDevice(String deviceId) {
+        synchronized (mQueueLock) {
+            try {
+                publish(String.format("/devices/%s/detach", deviceId), "{}".getBytes(), 1);
+                Log.d(TAG, "Published detach event");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        mSemaphore.release();
+        return true;
+    }
+
+    public boolean sendForDevice(String deviceId, byte[] data) {
+        synchronized (mQueueLock) {
+            try {
+                publish(String.format("/devices/%s/events", deviceId), data, 1);
+                Log.d(TAG, String.format(Locale.US, "Published an event for %s", deviceId));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }
         mSemaphore.release();
         return true;
     }
